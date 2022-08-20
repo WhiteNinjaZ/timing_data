@@ -1,6 +1,6 @@
 ## Overview
 
-This repo includes some of the work I have done on the timing info for the artix parts. Recently I have been using python scripts to figure out how the json timing data in prjxray works. interpret_wire_timing.py is an example of that. Right now the code loops through every wire inside of the INT L and R tiles and makes sure that the timing info of a buffer that goes to a specific wire length is the same (i.e. makes sure that all pips that end in ->>WW2BEG0 are the same). It might be worth looking through the json files I point to in that script as well as the script itself to get an idea of what is going on.
+This repo includes some of the work I have done on the timing info for the artix parts. Recently I have been using python scripts to figure out how the json timing data in prjxray works. interpret_wire_timing.py is an example of that. Right now the code loops through every wire inside of the INT L and R tiles and makes sure that the timing info of a buffer that goes to a specific wire length is the same (i.e. makes sure that all pips that ending in ->>WW2BEG0 are the same). It might be worth looking through the json files I point to in that script as well as the script itself to get an idea of what is going on.
 
 ## Useful info 
 There are two things that I see as very useful to us in prjxray. One is the tile_type.json files located in database/artix7. These not only include general interconnect for the tiles but also include prjxrays timing models for every internal switch and every wire crossing through the tile. 
