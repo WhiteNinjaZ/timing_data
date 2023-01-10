@@ -1,0 +1,6 @@
+Wires:
+
+CLB out switches (mux pins)
+CLB in switches (mux switches)
+
+Internal switches (delay matrixes)

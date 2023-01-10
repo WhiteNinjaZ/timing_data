@@ -1,0 +1,16 @@
+Need a way to go from f4pga to vtr. Average using the following method:
+For every net with a given wire type solve for wire type and 
+
+
+Might want to make your own experiemnt playground rr graph. 
+Could do this by picking a few paths and adding up their wire types.
+
+
+Surely xilinx has some kind of output that tells us how many of certain wire types and pips there are in a net. 
+in other words, this is what I am made of and this is my timing. If we get something that is an average and build an rr
+is it the same type of deal?
+
+
+Remember that the wire names going through a CLB tile is a portion of a wire passing through that block.
+
+This: INT_L_X4Y53/INT_L.LOGIC_OUTS_L23->>WW2BEG1 is a pip. Most things with the arrows are
