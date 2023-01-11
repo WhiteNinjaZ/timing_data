@@ -61,22 +61,16 @@ logger.setLevel(logging.ERROR)
 # LB------------------------->CB------------>SB<------------>
 #     from_log_to_rout_pip       CB_SB_DELAY
 #
-#
-#
+# LB<------------------------CB<------------SB<------------>
+#     from_rout_pip_to_LB
 #
 #
 #
 
 
-# Init parser
-parser = argparse.ArgumentParser(
-    usage="timing_calculator_comparitor.py [-h] [-v] sheet excel_file",
-    add_help=True,
-)
-parser.add_argument("-v", "--verbose", action="store_true", default=False)
-parser.add_argument("excel_file", type=str)
-parser.add_argument("sheet", default="Net ALU1_n_56", type=str)
-parser.add_argument("wire", type=str)
+# constant definitions
+MEAN_OF_FOUR = 4
+MEAN_OF_TWO = 2
 
 
 class routing_structures:
@@ -121,6 +115,9 @@ def parse_file(args):
     logger.debug("************WIRES****************")
     logger.debug(wires)
 
+    logger.debug("****************LOGIC to ROUTING****************")
+    logger.debug(from_log_to_rout_pip)
+
     return routing_structures(wires, from_log_to_rout_pip)
 
 
@@ -131,47 +128,43 @@ class timing:
         self.time = time
 
 
-def time_wire(name, wires):
-    res = 0
-    cap = 0
-    time = 0
-    cnt = 0
+def time_wire(name, routing_structures):
+    wires = routing_structures.wires
+    logic_to_routing = routing_structures.from_log_to_rout_pip
     logger.debug("****************TEST****************")
     # for wire in wires:
-    print((wires["Name"].iloc[0]).find(name))
+    # print((wires["Name"].iloc[0]).find(name))
     for row in wires.index:
         if (wires["Name"].iloc[0]).find(name) == -1:
             wires = wires.drop(row)
-    logger.debug(f"Only the timing data for the given wires {wires}")
+    for row in logic_to_routing.index:
+        if logic_to_routing["Name"].iloc[0].find(name) == -1:
+            logic_to_routing = logic_to_routing.drop(row)
 
-    print(f"Resistance for {name} is {wires.RES.mean()}")
-    print(f"Capacitance for {name} is {wires.CAP.mean()}")
+    logger.debug(
+        f"Only the timing data for the given wires\n{wires}\n\n{logic_to_routing}\n\n{logic_to_routing}"
+    )
+
+    print(
+        f"Resistance for {name} is {(wires.RES.mean() + logic_to_routing.RES.mean())/MEAN_OF_TWO}"
+    )
+    print(
+        f"Capacitance for {name} is {(wires.CAP.mean() + logic_to_routing.CAP.mean())/MEAN_OF_TWO}"
+    )
     mean_list = ["FAST_MAX", "FAST_MIN", "SLOW_MAX", "SLOW_MIN"]
     # Sum all columns together
-    df_mean = wires[mean_list].sum(axis=1)
-    logger.debug(f"data structure before division\n{df_mean}")
-    df_mean = df_mean.div(4)
+    wire_mean = wires[mean_list].sum(axis=1)
+    logger.debug(f"Wire data structure before division\n{wire_mean}")
+    rout_mean = logic_to_routing[mean_list].sum(axis=1)
+    rout_mean = rout_mean.div(MEAN_OF_FOUR)
+    wire_mean = wire_mean.div(MEAN_OF_FOUR)
 
-    print(f"Time average for four corners of {name} is {df_mean.mean()}")
+    print(
+        f"Time average for four corners of {name} is {(wire_mean.mean() + rout_mean.mean())/MEAN_OF_TWO}"
+    )
     # if (wire["Name"].iloc[0]).find(name) != -1:
 
     #     cnt += 1
     #     res += wire["RES"]
     #     cap += wire["CAP"]
     #     time += (wire["FAST_MAX"] + wire["FAST_MIN"]) / 2
-
-
-def main():
-    args = parser.parse_args()
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-    routing_structures = None
-
-    # file is "/home/chem3000/Desktop/timing_basys.ods"
-    # sheet is "Net ALU1_n_56"
-    routing_structures = parse_file(args)
-    time_wire(args.wire, routing_structures.wires)
-
-
-if __name__ == "__main__":
-    main()
