@@ -79,17 +79,12 @@ class routing_structures:
         self.from_log_to_rout_pip = from_log_to_rout_pip
 
 
-def parse_file(args):
-    # ziparchive = zipfile.ZipFile("/home/chem3000/Desktop/timing_basys.ods", "r")
-    # xmldata = ziparchive.read("content.xml")
-    # ziparchive.close()
-    data = pd.read_excel(
-        args.excel_file,
-        sheet_name=args.sheet
-        # usecols="A:A",
-    )
-    logger.debug(data)
+# parse file does the shabang
+# time wire parses a single data frame and gives us the routing structures timing
+#
 
+
+def parse_routing_structures(data):
     nameArray = data["Name"]
 
     from_log_to_rout_pip = pd.DataFrame()
@@ -104,14 +99,21 @@ def parse_file(args):
                 "(.*)(->|->>)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(.*)",
                 name,
             ):
-                from_log_to_rout_pip = from_log_to_rout_pip.append(
-                    data[data["Name"] == name], ignore_index=True
+                # from_log_to_rout_pip = from_log_to_rout_pip.append(
+                #     data[data["Name"] == name], ignore_index=True
+                # )
+                from_log_to_rout_pip = pd.concat(
+                    [from_log_to_rout_pip, data[data["Name"] == name]],
+                    axis=0,
+                    ignore_index=True,
                 )
             elif re.match(
                 "(.*)(/)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(.{2,4})",
                 name,
             ):  # this is our wires
-                wires = wires.append(data[data["Name"] == name], ignore_index=True)
+                wires = pd.concat(
+                    [wires, data[data["Name"] == name]], ignore_index=True, axis=0
+                )
     logger.debug("************WIRES****************")
     logger.debug(wires)
 
@@ -129,6 +131,10 @@ class timing:
 
 
 def time_wire(name, routing_structures):
+    res = 0
+    cap = 0
+    time = 0
+
     wires = routing_structures.wires
     logic_to_routing = routing_structures.from_log_to_rout_pip
     logger.debug("****************TEST****************")
@@ -144,27 +150,94 @@ def time_wire(name, routing_structures):
     logger.debug(
         f"Only the timing data for the given wires\n{wires}\n\n{logic_to_routing}\n\n{logic_to_routing}"
     )
-
-    print(
-        f"Resistance for {name} is {(wires.RES.mean() + logic_to_routing.RES.mean())/MEAN_OF_TWO}"
-    )
-    print(
-        f"Capacitance for {name} is {(wires.CAP.mean() + logic_to_routing.CAP.mean())/MEAN_OF_TWO}"
-    )
     mean_list = ["FAST_MAX", "FAST_MIN", "SLOW_MAX", "SLOW_MIN"]
-    # Sum all columns together
-    wire_mean = wires[mean_list].sum(axis=1)
-    logger.debug(f"Wire data structure before division\n{wire_mean}")
-    rout_mean = logic_to_routing[mean_list].sum(axis=1)
-    rout_mean = rout_mean.div(MEAN_OF_FOUR)
-    wire_mean = wire_mean.div(MEAN_OF_FOUR)
+    if len(wires) != 0:
+        res = wires.RES.mean()
+        cap = wires.CAP.mean()
+        wire_mean = wires[mean_list].sum(axis=1)
+        logger.debug(f"Wire data structure before division\n{wire_mean}")
+        wire_mean = wire_mean.div(MEAN_OF_FOUR)
+        time = wire_mean.mean()
 
-    print(
-        f"Time average for four corners of {name} is {(wire_mean.mean() + rout_mean.mean())/MEAN_OF_TWO}"
-    )
+        if len(logic_to_routing) != 0:
+            res += logic_to_routing.RES.mean()
+            res /= MEAN_OF_TWO
+            cap += logic_to_routing.CAP.mean()
+            cap /= MEAN_OF_TWO
+
+            rout_mean = logic_to_routing[mean_list].sum(axis=1)
+            rout_mean = rout_mean.div(MEAN_OF_FOUR)
+            time += rout_mean.mean()
+            time /= MEAN_OF_TWO
+
+    elif len(logic_to_routing) != 0:
+        res = wires.RES.mean()
+        cap = wires.CAP.mean()
+
+        rout_mean = logic_to_routing[mean_list].sum(axis=1)
+        rout_mean = rout_mean.div(MEAN_OF_FOUR)
+        time = rout_mean.mean()
+    else:
+        return None  # TODO whatever calls this needs to skip a mean addition if this function returns none
+
+    logger.debug(f"Resistance for {name} is {res}")
+    logger.debug(f"Capacitance for {name} is {cap}")
+    logger.debug(f"Time average for four corners of {name} is {time}")
+    # res = (wires.RES.mean() + logic_to_routing.RES.mean()) / MEAN_OF_TWO
+
+    # print(f"Resistance for {name} is {res}")
+    # cap = (wires.CAP.mean() + logic_to_routing.CAP.mean()) / MEAN_OF_TWO
+
+    # print(f"Capacitance for {name} is {cap}")
+
+    # Sum all columns together
+
+    # time = (wire_mean.mean() + rout_mean.mean()) / MEAN_OF_TWO
+    # print(f"Time average for four corners of {name} is {time}")
     # if (wire["Name"].iloc[0]).find(name) != -1:
 
     #     cnt += 1
     #     res += wire["RES"]
     #     cap += wire["CAP"]
     #     time += (wire["FAST_MAX"] + wire["FAST_MIN"]) / 2
+    return timing(res, cap, time)
+
+
+def parse_file(args):
+    # ziparchive = zipfile.ZipFile("/home/chem3000/Desktop/timing_basys.ods", "r")
+    # xmldata = ziparchive.read("content.xml")
+    # ziparchive.close()
+    if args.sheet is None:
+        all_sheets = pd.read_excel(args.excel_file, sheet_name=None)
+        rout_struct = None
+        time = timing(0, 0, 0)
+
+        for sheet_key in all_sheets:
+            try:
+                if sheet_key == "Summary":
+                    continue
+                rout_struct = parse_routing_structures(all_sheets[sheet_key])
+                sheet_time = time_wire(args.wire, rout_struct)
+                if sheet_time is None:
+                    continue
+                time = timing(
+                    (time.res + sheet_time.res) / MEAN_OF_TWO,
+                    (time.cap + sheet_time.cap) / MEAN_OF_TWO,
+                    (time.time + sheet_time.time) / MEAN_OF_TWO,
+                )
+            except Exception as e:
+                print(f"error caught on sheet {sheet_key}\n\n")
+                print(e)
+                print(all_sheets[sheet_key])
+                return None
+        return timing(time.res, time.cap, time.time)
+
+    else:
+        data = pd.read_excel(
+            args.excel_file,
+            sheet_name=args.sheet
+            # usecols="A:A",
+        )
+        rout_struct = parse_routing_structures(data)
+        return time_wire(args.wire, rout_struct)
+    # logger.debug(data)

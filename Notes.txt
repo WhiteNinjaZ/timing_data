@@ -14,3 +14,26 @@ is it the same type of deal?
 Remember that the wire names going through a CLB tile is a portion of a wire passing through that block.
 
 This: INT_L_X4Y53/INT_L.LOGIC_OUTS_L23->>WW2BEG1 is a pip. Most things with the arrows are
+
+
+vivado gives the values for the four corners. Modify the code to except an argument that figures out 
+which corner we want to calculate. Default is mean of all 4. 
+or
+since a run takes so long just report the 4 corners along with the mean. <---The better idea
+
+Q:
+How does vtr calculate its  timing? Is it just the sum of all wire timing in a net?
+
+A:
+Switches, Wires, and ports on CLB are considered when looking at timing.
+
+Conversion:
+Switches:
+Cout = downstream C
+Cin = CAP
+R = RES
+Tdel = 4 corners (which one or mean?)
+
+Wires: 
+Rmetal = Res/unit length
+Cmetal = Cap/unit length

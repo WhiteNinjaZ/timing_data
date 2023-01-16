@@ -7,7 +7,7 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument("-v", "--verbose", action="store_true", default=False)
 parser.add_argument("excel_file", type=str)
-parser.add_argument("sheet", default="Net ALU1_n_56", type=str)
+parser.add_argument("-s", "--sheet", dest="sheet", default=None, type=str)
 parser.add_argument("wire", type=str)
 
 
@@ -15,12 +15,14 @@ def main():
     args = parser.parse_args()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
-    routing_structures = None
 
     # file is "/home/chem3000/Desktop/timing_basys.ods"
     # sheet is "Net ALU1_n_56"
-    routing_structures = parse_file(args)
-    time_wire(args.wire, routing_structures)
+    parse_file(args)
+    time = parse_file(args)
+    print(f"Resistance for wire {args.wire} is {time.res}")
+    print(f"Capacitance for wire {args.wire} is {time.cap}")
+    print(f"Intrinsic time for wire {args.wire} is {time.time}")
 
 
 if __name__ == "__main__":
