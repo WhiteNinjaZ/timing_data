@@ -20,6 +20,9 @@ def main():
     # sheet is "Net ALU1_n_56"
     parse_file(args)
     time = parse_file(args)
+    if time is None:
+        print("Somethings not quite right :(")
+        return
     print(f"Resistance for wire {args.wire} is {time.res}")
     print(f"Capacitance for wire {args.wire} is {time.cap}")
     print(f"Intrinsic time for wire {args.wire} is {time.time}")

@@ -68,6 +68,8 @@ logger.setLevel(logging.ERROR)
 #
 
 
+#! set python enterpreter by ctrl+shift+p (open command pallete) type python enterpreter and select
+
 # constant definitions
 MEAN_OF_FOUR = 4
 MEAN_OF_TWO = 2
@@ -89,6 +91,7 @@ def parse_routing_structures(data):
 
     from_log_to_rout_pip = pd.DataFrame()
     wires = pd.DataFrame()
+    # wires.columns(data.head)
     for name in nameArray:
         # print(name)
         if not pd.isna(name):
@@ -107,13 +110,17 @@ def parse_routing_structures(data):
                     axis=0,
                     ignore_index=True,
                 )
-            elif re.match(
-                "(.*)(/)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(.{2,4})",
-                name,
-            ):  # this is our wires
-                wires = pd.concat(
-                    [wires, data[data["Name"] == name]], ignore_index=True, axis=0
-                )
+    wire_list = []
+    # wire_list.append(data.head())
+    for row in data.index:
+        if data["Type"].iloc[row] == "Part of wire":  # this is our wires
+            wire_list.append(data.iloc[row])
+    wires = pd.concat(
+        [wires, pd.DataFrame(wire_list)],
+        ignore_index=True,
+        axis=0,
+    )
+
     logger.debug("************WIRES****************")
     logger.debug(wires)
 
@@ -122,6 +129,8 @@ def parse_routing_structures(data):
 
     return routing_structures(wires, from_log_to_rout_pip)
 
+    ##!!!!! Where we are: the from_log_to_rout_pips are not being built right..
+
 
 class timing:
     def __init__(self, res, cap, time):
@@ -129,8 +138,17 @@ class timing:
         self.cap = cap
         self.time = time
 
+    def __eq__(self, other):
+        return (
+            self.res == other.res and self.time == other.time and self.cap == other.cap
+        )
+
 
 def time_wire(name, routing_structures):
+    # TODO: our current wire list does not include wire parts of the form CLBLL_L_X4Y54/CLBLL_WL1END3
+    # TODO: this must be rectified. I think the wires we are getting are actually the incorrect type because
+    # all of their values are zero
+
     res = 0
     cap = 0
     time = 0
@@ -140,12 +158,15 @@ def time_wire(name, routing_structures):
     logger.debug("****************TEST****************")
     # for wire in wires:
     # print((wires["Name"].iloc[0]).find(name))
+    true_wires = []
+    # print("Wires:\n\n", wires)
     for row in wires.index:
-        if (wires["Name"].iloc[0]).find(name) == -1:
-            wires = wires.drop(row)
-    for row in logic_to_routing.index:
-        if logic_to_routing["Name"].iloc[0].find(name) == -1:
-            logic_to_routing = logic_to_routing.drop(row)
+        if (wires["Name"].iloc[row]).find(name) != -1:
+            true_wires.append(wires.iloc[row])
+    wires = pd.DataFrame(true_wires)
+    # for row in logic_to_routing.index:
+    #     if logic_to_routing["Name"].iloc[0].find(name) == -1:
+    #         logic_to_routing = logic_to_routing.drop(row)
 
     logger.debug(
         f"Only the timing data for the given wires\n{wires}\n\n{logic_to_routing}\n\n{logic_to_routing}"
@@ -159,24 +180,24 @@ def time_wire(name, routing_structures):
         wire_mean = wire_mean.div(MEAN_OF_FOUR)
         time = wire_mean.mean()
 
-        if len(logic_to_routing) != 0:
-            res += logic_to_routing.RES.mean()
-            res /= MEAN_OF_TWO
-            cap += logic_to_routing.CAP.mean()
-            cap /= MEAN_OF_TWO
+    #     if len(logic_to_routing) != 0:
+    #         res += logic_to_routing.RES.mean()
+    #         res /= MEAN_OF_TWO
+    #         cap += logic_to_routing.CAP.mean()
+    #         cap /= MEAN_OF_TWO
 
-            rout_mean = logic_to_routing[mean_list].sum(axis=1)
-            rout_mean = rout_mean.div(MEAN_OF_FOUR)
-            time += rout_mean.mean()
-            time /= MEAN_OF_TWO
+    #         rout_mean = logic_to_routing[mean_list].sum(axis=1)
+    #         rout_mean = rout_mean.div(MEAN_OF_FOUR)
+    #         time += rout_mean.mean()
+    #         time /= MEAN_OF_TWO
 
-    elif len(logic_to_routing) != 0:
-        res = wires.RES.mean()
-        cap = wires.CAP.mean()
+    # elif len(logic_to_routing) != 0:
+    #     res = wires.RES.mean()
+    #     cap = wires.CAP.mean()
 
-        rout_mean = logic_to_routing[mean_list].sum(axis=1)
-        rout_mean = rout_mean.div(MEAN_OF_FOUR)
-        time = rout_mean.mean()
+    #     rout_mean = logic_to_routing[mean_list].sum(axis=1)
+    #     rout_mean = rout_mean.div(MEAN_OF_FOUR)
+    #     time = rout_mean.mean()
     else:
         return None  # TODO whatever calls this needs to skip a mean addition if this function returns none
 
@@ -211,14 +232,15 @@ def parse_file(args):
         all_sheets = pd.read_excel(args.excel_file, sheet_name=None)
         rout_struct = None
         time = timing(0, 0, 0)
-
+        sheet_time = None
+        rout_struct = None
         for sheet_key in all_sheets:
             try:
                 if sheet_key == "Summary":
                     continue
                 rout_struct = parse_routing_structures(all_sheets[sheet_key])
                 sheet_time = time_wire(args.wire, rout_struct)
-                if sheet_time is None:
+                if sheet_time is None or sheet_time == timing(0, 0, 0):
                     continue
                 time = timing(
                     (time.res + sheet_time.res) / MEAN_OF_TWO,
@@ -227,7 +249,7 @@ def parse_file(args):
                 )
             except Exception as e:
                 print(f"error caught on sheet {sheet_key}\n\n")
-                print(e)
+                print("Error raised:", e)
                 print(all_sheets[sheet_key])
                 return None
         return timing(time.res, time.cap, time.time)
