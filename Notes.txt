@@ -25,15 +25,95 @@ Q:
 How does vtr calculate its  timing? Is it just the sum of all wire timing in a net?
 
 A:
-Switches, Wires, and ports on CLB are considered when looking at timing.
+Switches, **Wires**, and ports on CLB are considered when looking at timing.
 
 Conversion:
 Switches:
-Cout = downstream C
+Cout = downstream C #TODO
 Cin = CAP
-R = RES
+R = RES 
 Tdel = 4 corners (which one or mean?)
 
 Wires: 
 Rmetal = Res/unit length
 Cmetal = Cap/unit length
+
+# for now we will just assume that it is (total R/C)/L we already did the bulk of the work here. 
+# It might also be just R and C since we found these from parts of wires anyway.
+
+
+
+# NEXT: work on log_rout_pip ()
+
+
+# Switch break down: 
+# input switch for connection blocks (connection block)
+# switches between wires (switchblocks (this one is generalized hevily but can be detailed))
+
+
+
+##### **** The important thing to remember for research is that it is ok to be a little slow at the beginning. The important thing is to keep at it until 
+# you make it into the zone.
+
+
+
+
+############################### XILINX ############################
+                 Wire
+#                / 
+#               /
+#       |-------|------|              |----|   |---------|
+#       |       |      |              |    |   |         |
+#       |       X--CB--|-part of wire-|\   |   |  logic  |------|
+#       |       |   ^  |              |pass|   |         |      |
+#       |      SB <buff|              |Tran|   |         |      |
+#       |       |      |              |   \|   |---------|      |
+#       |       |      |              |    |                    |
+#       |-------|------|              |----|-------/CLBLM_L_Cx2--
+#               /
+#              /
+#             /
+#            Wire
+#
+       ^^^^ The above image is correct
+
+Xs are timing points where switches are
+
+##########################VTR ##############################                                                                  
+#                                                                    
+#                                                                    
+#                        |---------X------------wire
+#                        |        /|
+#                        |  SB   / |
+#                        |      /  |
+#                        |     /   |
+#                        |---------|                                             
+#                             |              
+#                             |              
+#                             |         |---------|                                   
+#                             |         |         |              
+#                        CB-->X-----<---|  logic  |              
+#                             |         |         |              
+#                             |         |         |              
+#                                       |---------|              
+
+
+? is xilinx the same sum from logic -> cb for every type of wire
+
+CBvtr = 
+
+
+
+Note: 
+
+SB is easy :) we can toattaly just use the segment definitions to specify diffrent switch types. Take average connection to all wires. 
+(find every instance of a buffer from a wire to WL1 or WR1)     <---------Next step
+
+
+
+
+# FInals:
+
+
+# Wires:
+# for this we are looking at the timing on wire segments found within nets (this happens every now and again)
