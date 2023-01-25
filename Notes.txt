@@ -60,22 +60,35 @@ Cmetal = Cap/unit length
 
 ############################### XILINX ############################
                  Wire
-#                / 
+#                /                    /----------Internal--------\
 #               /
 #       |-------|------|              |----|   |---------|
-#       |       |      |              |    |   |         |
-#       |       X--CB--|-part of wire-|\   |   |  logic  |------|
+#       |       |(6)   |    (5)       |    |   |         |(1)
+#       |       X--CB--|-part of wire-|\(4)|   |  logic  X------|
 #       |       |   ^  |              |pass|   |         |      |
-#       |      SB <buff|              |Tran|   |         |      |
-#       |       |      |              |   \|   |---------|      |
-#       |       |      |              |    |                    |
-#       |-------|------|              |----|-------/CLBLM_L_Cx2--
-#               /
+#       |      SB <buff|              |Tran|   |         |      |   
+#       |       |      |              |   \|(3)|---------|      |  (2)
+#       |       |      |              |    X-------(2/3)--------|
+#       |-------|------|              |----|-------/CLBLM_L_Cx2-|
+#               /                           
 #              /
 #             /
 #            Wire
 #
        ^^^^ The above image is correct
+
+(1) outpin (has timing i.e. CLBLL_L_X4Y53/CLBLL_LL_D). Of the same name that is classified as part of a wire
+(2) wire portion of outpin (no timing)
+(3) CLBLL_L_X4Y53/CLBLL_L.CLBLL_LL_D->>CLBLL_LL_DMUX a buffer also with unique timing info
+(2/3) A timing oddity? This structure contains timing of parts 1-3 but not beyond. As far as I can tell 
+       this timing contributes to both vivado (at least its part of the nets timing) and symbiflow. 
+       These are missing part 4+
+(4) CLBLL_L_X4Y53/CLBLL_L.CLBLL_LL_DMUX->CLBLL_LOGIC_OUTS23 (pip) pass transistor. 
+(5) CLBLL_L_X4Y53/CLBLL_LOGIC_OUTS23 part of wire
+(6) INT_L_X4Y53/INT_L.LOGIC_OUTS_L23->>WW2BEG1 (buffer)
+
+
+
 
 Xs are timing points where switches are
 
