@@ -65,7 +65,7 @@ Cmetal = Cap/unit length
 #       |-------|------|              |----|   |---------|
 #       |       |(6)   |    (5)       |    |   |         |(1)
 #       |       X--CB--|-part of wire-|\(4)|   |  logic  X------|
-#       |       |   ^  |              |pass|   |         |      |
+#       |       |   ^  |              |pass|   |         |      |                  
 #       |      SB <buff|              |Tran|   |         |      |   
 #       |       |      |              |   \|(3)|---------|      |  (2)
 #       |       |      |              |    X-------(2/3)--------|
@@ -123,6 +123,15 @@ SB is easy :) we can toattaly just use the segment definitions to specify diffre
 (find every instance of a buffer from a wire to WL1 or WR1)     <---------Next step
 
 
+*** How to we model Xiilnx in VTR: 
+* note that internal structure should not be incorporated in CB for the following reason: it is specific to certain paths, 
+also recall that only O6 on the internal muxes have those gost timing wires. 
+
+* plan: 
+model CB = (4)+(5)+(6)
+       ? does that eq hold for all pins to a given wire? (latter)
+
+model SB = average of all wires going TOO a specific wire length.
 
 
 # FInals:
@@ -130,3 +139,14 @@ SB is easy :) we can toattaly just use the segment definitions to specify diffre
 
 # Wires:
 # for this we are looking at the timing on wire segments found within nets (this happens every now and again)
+
+SB:
+Easy just find the timing to a specific type of wire.
+
+CB:
+(4) CLBLL_L_X4Y53/CLBLL_L.CLBLL_LL_DMUX→CLBLL_LOGIC_OUTS23 [Passtransistor] \ take the average of the ports here before the bellow and add them to CB (not sure if this is valid)
+(5) CLBLL_L_X4Y53/CLBLL_LOGIC_OUTS23 [Part of Wire]                         /
+(6) INT_L_X4Y53/INT_L.LOGIC_OUTS_L23→>WW2BEG1 [Buffer] (easy) <-- at least get this done
+
+
+# from DR. Goeders: dont include the repeats: those are just caries and our model doesnt have carries.

@@ -90,33 +90,62 @@ def parse_routing_structures(data):
     nameArray = data["Name"]
 
     from_log_to_rout_pip = pd.DataFrame()
+    wire_wire_connections = pd.DataFrame()
     wires = pd.DataFrame()
     # wires.columns(data.head)
-    for name in nameArray:
-        # print(name)
-        if not pd.isna(name):
-            if re.match(
-                "(.*)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(.*)(->|->>)(.*)",
-                name,
-            ) or re.match(
-                "(.*)(->|->>)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(.*)",
-                name,
-            ):
-                # from_log_to_rout_pip = from_log_to_rout_pip.append(
-                #     data[data["Name"] == name], ignore_index=True
-                # )
-                from_log_to_rout_pip = pd.concat(
-                    [from_log_to_rout_pip, data[data["Name"] == name]],
-                    axis=0,
-                    ignore_index=True,
-                )
+    # cb_list = []
+    # for name in nameArray:
+    #     # print(name)
+    #     if not pd.isna(name):
+    #         if re.match(
+    #             "(.*)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(END\d+)(->|->>)(IMUX)(.*)",
+    #             name,
+    #         ) or re.match(
+    #             "(.*)(LOGIC)(.*)(->|->>)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(BEG\d+)",
+    #             name,
+    #         ):
+    # from_log_to_rout_pip = from_log_to_rout_pip.append(
+    #     data[data["Name"] == name], ignore_index=True
+    # )
+    # from_log_to_rout_pip.loc[len(from_log_to_rout_pip)] = data[
+    #     data["Name"] == name
+    # ]
+
+    # from_log_to_rout_pip = pd.concat(
+    #     [from_log_to_rout_pip, data[data["Name"] == name]],
+    #     axis=0,
+    #     ignore_index=True,
+    # )
+    # from_log_to_rout_pip = pd.concat(
+    #     [from_log_to_rout_pip, cb_list], ignore_index=True, axis=0
+    # )
+    # print("****************LOGIC to ROUTING****************")
+    # print(cb_list)
+
     wire_list = []
+    cb_list = []
     # wire_list.append(data.head())
     for row in data.index:
         if data["Type"].iloc[row] == "Part of wire":  # this is our wires
             wire_list.append(data.iloc[row])
+        wire_name = data["Name"].iloc[row]
+        if re.match(
+            "(.*)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(END\d+)(->|->>)(IMUX)(.*)",
+            str(wire_name),
+        ) or re.match(
+            "(.*)(LOGIC)(.*)(->|->>)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(BEG\d+)",
+            str(wire_name),
+        ):
+            cb_list.append(data.iloc[row])
+
     wires = pd.concat(
         [wires, pd.DataFrame(wire_list)],
+        ignore_index=True,
+        axis=0,
+    )
+
+    from_log_to_rout_pip = pd.concat(
+        [from_log_to_rout_pip, pd.DataFrame(cb_list)],
         ignore_index=True,
         axis=0,
     )
@@ -128,8 +157,6 @@ def parse_routing_structures(data):
     logger.debug(from_log_to_rout_pip)
 
     return routing_structures(wires, from_log_to_rout_pip)
-
-    ##!!!!! Where we are: the from_log_to_rout_pips are not being built right..
 
 
 class timing:
@@ -144,6 +171,10 @@ class timing:
         )
 
 
+def time_cb(name, routing_structures):
+    logic_to_routing = routing_structures.from_log_to_rout_pip
+
+
 def time_wire(name, routing_structures):
     # TODO: our current wire list does not include wire parts of the form CLBLL_L_X4Y54/CLBLL_WL1END3
     # TODO: this must be rectified. I think the wires we are getting are actually the incorrect type because
@@ -154,7 +185,6 @@ def time_wire(name, routing_structures):
     time = 0
 
     wires = routing_structures.wires
-    logic_to_routing = routing_structures.from_log_to_rout_pip
     logger.debug("****************TEST****************")
     # for wire in wires:
     # print((wires["Name"].iloc[0]).find(name))
@@ -168,9 +198,9 @@ def time_wire(name, routing_structures):
     #     if logic_to_routing["Name"].iloc[0].find(name) == -1:
     #         logic_to_routing = logic_to_routing.drop(row)
 
-    logger.debug(
-        f"Only the timing data for the given wires\n{wires}\n\n{logic_to_routing}\n\n{logic_to_routing}"
-    )
+    # logger.debug(
+    #     f"Only the timing data for the given wires\n{wires}\n\n{logic_to_routing}\n\n{logic_to_routing}"
+    # )
     mean_list = ["FAST_MAX", "FAST_MIN", "SLOW_MAX", "SLOW_MIN"]
     if len(wires) != 0:
         res = wires.RES.mean()
@@ -235,23 +265,23 @@ def parse_file(args):
         sheet_time = None
         rout_struct = None
         for sheet_key in all_sheets:
-            try:
-                if sheet_key == "Summary":
-                    continue
-                rout_struct = parse_routing_structures(all_sheets[sheet_key])
-                sheet_time = time_wire(args.wire, rout_struct)
-                if sheet_time is None or sheet_time == timing(0, 0, 0):
-                    continue
-                time = timing(
-                    (time.res + sheet_time.res) / MEAN_OF_TWO,
-                    (time.cap + sheet_time.cap) / MEAN_OF_TWO,
-                    (time.time + sheet_time.time) / MEAN_OF_TWO,
-                )
-            except Exception as e:
-                print(f"error caught on sheet {sheet_key}\n\n")
-                print("Error raised:", e)
-                print(all_sheets[sheet_key])
-                return None
+            # try:
+            if sheet_key == "Summary":
+                continue
+            rout_struct = parse_routing_structures(all_sheets[sheet_key])
+            sheet_time = time_wire(args.wire, rout_struct)
+            if sheet_time is None or sheet_time == timing(0, 0, 0):
+                continue
+            time = timing(
+                (time.res + sheet_time.res) / MEAN_OF_TWO,
+                (time.cap + sheet_time.cap) / MEAN_OF_TWO,
+                (time.time + sheet_time.time) / MEAN_OF_TWO,
+            )
+            # except Exception as e:
+            #     print(f"error caught on sheet {sheet_key}\n\n")
+            #     print("Error raised:", e)
+            #     print(all_sheets[sheet_key])
+            #     return None
         return timing(time.res, time.cap, time.time)
 
     else:
