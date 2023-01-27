@@ -92,35 +92,6 @@ def parse_routing_structures(data):
     from_log_to_rout_pip = pd.DataFrame()
     wire_wire_connections = pd.DataFrame()
     wires = pd.DataFrame()
-    # wires.columns(data.head)
-    # cb_list = []
-    # for name in nameArray:
-    #     # print(name)
-    #     if not pd.isna(name):
-    #         if re.match(
-    #             "(.*)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(END\d+)(->|->>)(IMUX)(.*)",
-    #             name,
-    #         ) or re.match(
-    #             "(.*)(LOGIC)(.*)(->|->>)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(BEG\d+)",
-    #             name,
-    #         ):
-    # from_log_to_rout_pip = from_log_to_rout_pip.append(
-    #     data[data["Name"] == name], ignore_index=True
-    # )
-    # from_log_to_rout_pip.loc[len(from_log_to_rout_pip)] = data[
-    #     data["Name"] == name
-    # ]
-
-    # from_log_to_rout_pip = pd.concat(
-    #     [from_log_to_rout_pip, data[data["Name"] == name]],
-    #     axis=0,
-    #     ignore_index=True,
-    # )
-    # from_log_to_rout_pip = pd.concat(
-    #     [from_log_to_rout_pip, cb_list], ignore_index=True, axis=0
-    # )
-    # print("****************LOGIC to ROUTING****************")
-    # print(cb_list)
 
     wire_list = []
     cb_list = []
@@ -129,14 +100,34 @@ def parse_routing_structures(data):
         if data["Type"].iloc[row] == "Part of wire":  # this is our wires
             wire_list.append(data.iloc[row])
         wire_name = data["Name"].iloc[row]
+        # I pins
         if re.match(
-            "(.*)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(END\d+)(->|->>)(IMUX)(.*)",
-            str(wire_name),
-        ) or re.match(
             "(.*)(LOGIC)(.*)(->|->>)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(BEG\d+)",
             str(wire_name),
         ):
-            cb_list.append(data.iloc[row])
+            # also capture part of wire portion (5)
+            if (row > 0) and (data["Type"].iloc[row - 1] == "Part of wire"):
+                cb_list.append(data.iloc[row - 1])
+
+                cb_list.append(data.iloc[row])
+            # also append data.iloc[row -1] if row is not zero so we can get the part of wire thing
+
+        # Opins
+        if re.match(
+            "(.*)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(END\d+)(->|->>)(IMUX)(.*)",
+            str(wire_name),
+        ):
+            # also capture part of wire portion (5)
+            if (row > 0) and (data["Type"].iloc[row + 1] == "Part of wire"):
+                cb_list.append(data.iloc[row + 1])
+
+                cb_list.append(data.iloc[row])
+
+        # ? Note there are instances where a pip will branch onto two wires (obviusly).
+        # ? In this case symbiflow first follows 1 branch and then another. Therfore the above
+        # ? asumption that the wire part will be before and after will not hold. We simply ignore
+        # ? this case for now because we should be abel to find enough instances where the case
+        # ? does not occure to extract the information.
 
     wires = pd.concat(
         [wires, pd.DataFrame(wire_list)],
@@ -173,6 +164,7 @@ class timing:
 
 def time_cb(name, routing_structures):
     logic_to_routing = routing_structures.from_log_to_rout_pip
+    # time out and in (report both to see how they differ at first.)
 
 
 def time_wire(name, routing_structures):

@@ -21,7 +21,7 @@ def main():
     parse_file(args)
     time = parse_file(args)
     if time is None:
-        print("Somethings not quite right :(")
+        print("No timing data found for given wire")
         return
     print(f"Resistance for wire {args.wire} is {time.res}")
     print(f"Capacitance for wire {args.wire} is {time.cap}")
