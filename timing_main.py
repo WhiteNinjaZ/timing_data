@@ -23,9 +23,16 @@ def main():
     if time is None:
         print("No timing data found for given wire")
         return
-    print(f"Resistance for wire {args.wire} is {time.res}")
-    print(f"Capacitance for wire {args.wire} is {time.cap}")
-    print(f"Intrinsic time for wire {args.wire} is {time.time}")
+    print(f"Resistance for wire {args.wire} is {time.time.res}")
+    print(f"Capacitance for wire {args.wire} is {time.time.cap}")
+    print(f"Intrinsic time for wire {args.wire} is {time.time.time}")
+
+    if time.cb_i is None:
+        print("No timing data found for given wire")
+        return
+    print(f"Resistance for cb_i {args.wire} is {time.cb_i.res}")
+    print(f"Capacitance for cb_i {args.wire} is {time.cb_i.cap}")
+    print(f"Intrinsic time for cb_i {args.wire} is {time.cb_i.time}")
 
 
 if __name__ == "__main__":
