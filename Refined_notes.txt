@@ -1,0 +1,15 @@
+It looks like there is only one switch in VTR to describe the switch to connect from CLB to routing and 
+from wire to wire.
+
+There is an <opin_switch name="string"/> for bi-directional only which is a CB type thing.
+
+Instead of doing a single Tdel you can specify seperate Tdel for a specific number of inputs.
+
+We might have to do all of our timming external as internal. 
+<direct name="adder_carry" from_pin="clb.cout" to_pin="clb.cin" x_offset="0" y_offset="-1" z_offset="0"/>
+
+
+I believe this is correct. We could override every switch too using switch_override in custom sb but at that
+point it would be better to just modify vtr to specify different CB and SB switches.
+
+^^^ To figure out if this needs to happen we need to find SD and info about switch block connections.

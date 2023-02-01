@@ -76,10 +76,11 @@ MEAN_OF_TWO = 2
 
 
 class routing_structures:
-    def __init__(self, wires, cb_i, cb_o):
+    def __init__(self, wires, cb_i, cb_o, sb_list):
         self.wires = wires
         self.cb_i = cb_i
         self.cb_o = cb_o
+        self.sb_list = sb_list
 
 
 # parse file does the shabang
@@ -96,6 +97,7 @@ def parse_routing_structures(data):
     wire_list = []
     cb_ilist = []
     cb_olist = []
+    sb_list = []
     # wire_list.append(data.head())
     for row in data.index:
         if data["Type"].iloc[row] == "Part of wire":  # this is our wires
@@ -114,7 +116,7 @@ def parse_routing_structures(data):
             # also append data.iloc[row -1] if row is not zero so we can get the part of wire thing
 
         # Opins
-        if re.match(
+        elif re.match(
             "(.*)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(END\d+)(->|->>)(IMUX)(.*)",
             str(wire_name),
         ):
@@ -123,6 +125,12 @@ def parse_routing_structures(data):
                 cb_olist.append(data.iloc[row + 1])
 
                 cb_olist.append(data.iloc[row])
+
+        elif re.match(
+            "(.*)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(END\d+)(->|->>)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(BEG\d+)",
+            str(wire_name),
+        ):
+            sb_list.append(data.iloc[row])
 
         # ? Note there are instances where a pip will branch onto two wires (obviusly).
         # ? In this case symbiflow first follows 1 branch and then another. Therfore the above
@@ -147,6 +155,7 @@ def parse_routing_structures(data):
         wires,
         pd.DataFrame(cb_ilist, index=range(0, len(cb_ilist))),
         pd.DataFrame(cb_olist, index=range(0, len(cb_olist))),
+        pd.DataFrame(sb_list, index=range(0, len(sb_list))),
     )
 
 
@@ -163,26 +172,42 @@ class timing:
 
 
 class time_structures:
-    def __init__(self, cb_i, cb_o, time):
+    def __init__(self, cb_i, cb_o, time, sb_time):
         self.cb_i = cb_i
         self.cb_o = cb_o
         self.time = time
-
-    # @property
-    # def cb_i(self):
-    #     return self.cb_i
-
-    # @property
-    # def cb_o(self):
-    #     return self.cb_o
-
-    # @property
-    # def time(self):
-    #     return self.time
+        self.sb_time = sb_time
 
 
-def time_cb(name, routing_structures):
-    cb_i = routing_structures.cb_i
+def time_sb(name, sb_list):
+    sb_filter = []
+
+    res = 0
+    cap = 0
+    time = 0
+
+    for row in sb_list.index:
+        if re.match(
+            f"(.*)((WW\d+|NN\d+|SS\d+|EE\d+|SW\d+|SE\d+|NW\d+|NE\d+)|(S|N|W|E)(L1|R1))(END\d+)(->|->>)({name})(BEG\d+)",
+            str(sb_list["Name"].iloc[row]),
+        ):
+            sb_filter.append(sb_list.iloc[row])
+    sb_list = pd.DataFrame(sb_filter)
+    mean_list = ["FAST_MAX", "FAST_MIN", "SLOW_MAX", "SLOW_MIN"]
+    if len(sb_list) != 0:
+        res = sb_list.RES.mean()
+        cap = sb_list.CAP.mean()
+        sb_imean = sb_list[mean_list].sum(axis=1)
+        logger.debug(f"Wire data structure before division\n{sb_imean}")
+        sb_imean = sb_imean.div(MEAN_OF_FOUR)
+        time = sb_imean.mean()
+    else:
+        return None
+
+    return timing(res, cap, time)
+
+
+def time_cb(name, cb_i):
 
     cb_ifilter = []
 
@@ -283,6 +308,7 @@ def parse_file(args):
     time = timing(0, 0, 0)
     cb_i = timing(0, 0, 0)
     cb_o = timing(0, 0, 0)
+    sb_time = timing(0, 0, 0)
     if args.sheet is None:
         all_sheets = pd.read_excel(args.excel_file, sheet_name=None)
         rout_struct = None
@@ -301,19 +327,34 @@ def parse_file(args):
                     (time.time + sheet_time.time) / MEAN_OF_TWO,
                 )
 
-            sheet_time = time_cb(args.wire, rout_struct)
+            sheet_time = time_cb(args.wire, rout_struct.cb_i)
             if sheet_time is not None and sheet_time != timing(0, 0, 0):
                 cb_i = timing(
                     (cb_i.res + sheet_time.res) / MEAN_OF_TWO,
                     (cb_i.cap + sheet_time.cap) / MEAN_OF_TWO,
                     (cb_i.time + sheet_time.time) / MEAN_OF_TWO,
                 )
+            sheet_time = time_cb(args.wire, rout_struct.cb_o)
+            if sheet_time is not None and sheet_time != timing(0, 0, 0):
+                cb_o = timing(
+                    (cb_o.res + sheet_time.res) / MEAN_OF_TWO,
+                    (cb_o.cap + sheet_time.cap) / MEAN_OF_TWO,
+                    (cb_o.time + sheet_time.time) / MEAN_OF_TWO,
+                )
+
+            sheet_time = time_sb(args.wire, rout_struct.sb_list)
+            if sheet_time is not None and sheet_time != timing(0, 0, 0):
+                sb_time = timing(
+                    (sb_time.res + sheet_time.res) / MEAN_OF_TWO,
+                    (sb_time.cap + sheet_time.cap) / MEAN_OF_TWO,
+                    (sb_time.time + sheet_time.time) / MEAN_OF_TWO,
+                )
             # except Exception as e:
             #     print(f"error caught on sheet {sheet_key}\n\n")
             #     print("Error raised:", e)
             #     print(all_sheets[sheet_key])
             #     return None
-        return time_structures(cb_i, cb_o, time)
+        return time_structures(cb_i, cb_o, time, sb_time)
 
     else:
         data = pd.read_excel(
@@ -324,5 +365,5 @@ def parse_file(args):
         rout_struct = parse_routing_structures(data)
         sheet_time = time_wire(args.wire, rout_struct)
         cb_i = time_cb(args.wire, rout_struct)
-        return time_structures(cb_i, cb_o, time)
+        return time_structures(cb_i, cb_o, time, sb_time)
     # logger.debug(data)
