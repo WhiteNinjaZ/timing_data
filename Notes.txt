@@ -87,6 +87,9 @@ Cmetal = Cap/unit length
 (5) CLBLL_L_X4Y53/CLBLL_LOGIC_OUTS23 part of wire
 (6) INT_L_X4Y53/INT_L.LOGIC_OUTS_L23->>WW2BEG1 (buffer)
 
+(2/3) is a cary chain and can be ignored since we don't use carry
+
+(1),(3),(6) contribute to timing.
 
 
 
@@ -150,3 +153,13 @@ CB:
 
 
 # from DR. Goeders: dont include the repeats: those are just caries and our model doesnt have carries.
+
+
+#NEXT Up use th json parser in python to get averages of all pips
+# also look into how much flexibility we have on internal timing in VTR.
+
+
+# I dont think there is internal timing for VTR just internal setup time can be done. 
+
+
+# cant lump anything with Elmore delays together since it depends on which resistance and capacitance values are together. 

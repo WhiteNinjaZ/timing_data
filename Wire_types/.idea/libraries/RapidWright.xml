@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="RapidWright">
+    <CLASSES>
+      <root url="file://$USER_HOME$/Programs/RapidWright/RapidWright" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="file://$USER_HOME$/Programs/RapidWright/RapidWright/src" />
+      <root url="file://$USER_HOME$/Programs/RapidWright/RapidWright/test/shared" />
+      <root url="file://$USER_HOME$/Programs/RapidWright/RapidWright/test/src" />
+    </SOURCES>
+  </library>
+</component>

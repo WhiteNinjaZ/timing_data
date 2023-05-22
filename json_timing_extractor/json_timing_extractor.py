@@ -169,7 +169,7 @@ def main():
                 time_internal = parse_cb_internal(cb_data)
 
 
-        print(f"Resistance for the internal out pin: {stat.mean(time_internal.res_pin)}, std: {stat.stdev(time_internal.res_pin)}\n")
+        print(f"Resistance for the internal out pin: {stat.mean([x + y for x, y in zip(time_internal.res_pin, time_internal.res_buf)])}, std: {stat.mean([x + y for x, y in zip(time_internal.res_pin, time_internal.res_buf)])}\n")
         #  in the first test we did all other values for this where zero
 
         if time_data.res != []:

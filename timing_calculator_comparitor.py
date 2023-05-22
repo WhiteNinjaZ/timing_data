@@ -215,7 +215,9 @@ def time_cb(name, cb_i):
     cap = 0
     time = 0
     for row in cb_i.index:
-        if (cb_i["Name"].iloc[row]).find(name) != -1:
+        if (cb_i["Name"].iloc[row]).find(
+            name
+        ) != -1:  # NOTE: This only takes the time for the buffer on the cb switch not switch+internal wire!!
             cb_ifilter.append(cb_i.iloc[row])
     cb_i = pd.DataFrame(cb_ifilter)
 
@@ -354,7 +356,7 @@ def parse_file(args):
             #     print("Error raised:", e)
             #     print(all_sheets[sheet_key])
             #     return None
-        return time_structures(cb_i, cb_o, time, sb_time)
+        return time_structures(cb_o, cb_i, time, sb_time)  ## TODO see bellow
 
     else:
         data = pd.read_excel(
@@ -363,7 +365,10 @@ def parse_file(args):
             # usecols="A:A",
         )
         rout_struct = parse_routing_structures(data)
-        sheet_time = time_wire(args.wire, rout_struct)
-        cb_i = time_cb(args.wire, rout_struct)
-        return time_structures(cb_i, cb_o, time, sb_time)
+        wire_time = time_wire(args.wire, rout_struct)
+        cb_i = time_cb(args.wire, rout_struct.cb_i)
+        cb_o = time_cb(args.wire, rout_struct.cb_o)
+        sb_time = time_sb(args.wire, rout_struct.sb_list)
+        return time_structures(cb_o, cb_i, wire_time, sb_time)
+        ## TODO: we accidentally switched cb_o and cb_i we do a temp fix here by just passing in the wrong values but we need to fix this permanantly
     # logger.debug(data)

@@ -13,3 +13,85 @@ I believe this is correct. We could override every switch too using switch_overr
 point it would be better to just modify vtr to specify different CB and SB switches.
 
 ^^^ To figure out if this needs to happen we need to find SD and info about switch block connections.
+
+
+
+Use R = p*L/A as a check where p=1.68x10^-8 m for copper, L is length and A is cross sectional area. 
+A=n^2 here where n is the process (28nm = 2.8E-8m)
+
+
+Note: VTR has the following to say about timing on internals of CLBs:
+A <switch>’s resistance (R) and output capacitance (Cout) have no effect on 
+delay when used for the input connection block, since VPR does not model the 
+resistance/capacitance of block internal wires.
+
+
+*** The timing is one more reason it is beneficial to keep CB and SB separate. It might be a good idea to create a new 
+graphics command line option to show vanilla mode or xilinx style mode. 
+
+
+How to see if the structure matters: 
+*** I believe that VTR and Xilinx could be considered equivalent if and only if (1) clb outputs wrap onto SB (2) we can prove 
+that the two SB next to each other work independent. 
+
+
+
+
+
+########### What we had originally was just the CB switch without the wire. The timings we got where apreciably different for io and sb.
+
+**************WIRE TIMING*********************
+RES WIRE: 0.025565351230531122
+CAP WIRE: 0.004330886830358694
+TIME WIRE: 0.0 ps
+
+
+**************CB_I*********************
+RES CB_I: 1.1828040025634765
+CAP CB_I: 0.008456451171875
+TIME CB_I: 0.09380859375 ps
+
+
+**************CB_O*********************
+RES CB_O: 1.6107141874765611
+CAP CB_O: 0.007712999999887761
+TIME CB_O: 0.084249999998774 ps
+
+
+**************SB*********************
+RES SB: 1.1851186874999833
+CAP SB: WW2 is 0.00847299999999988
+TIME SB: 0.09376644245076023 ps
+
+
+
+### Actually on second inspection: CB_O and SB are actually close. Its only CB_I thats different.
+WW2
+RES CB_I: 1.6107141874765611
+CAP CB_I: 0.007712999999887761
+TIME CB_I: 0.084249999998774 ps
+
+for NN2 the percent errors where as follows:
+RES: 0.1%
+CAP: 0.1%
+TIME: 0.37%
+
+for CBI and sb the difference was more like 36% error.
+
+yes in VTR there is a way to specify connection block input switches:
+<connection_block input_switch_name="string/>
+
+#** Attend VTR meeting and ask if we can allow for opin switches to be specified for unidirectional.
+
+** NextPNR notes: https://arxiv.org/pdf/1903.10407.pdf
+titan II is an extension of VTR that useses closed intel tools on the front end (packing and synthesis)
+
+Unlike many existing tools
+which describe an architecture using a flat file format such as
+XML; an architecture in nextpnr is an implementation of an
+Application Program Interface (API).
+
+
+** Again an idea: refactor graphics to look more like a xilinx structure. <-- THis is being done by Vughan team.
+
+** VTB paper: https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=7294007
